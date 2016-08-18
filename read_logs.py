@@ -72,8 +72,7 @@ def read_log(dirname):
     if not os.path.isdir(dirname):
         print ('Directory "' + dirname + '" not found')
         return {}
-    data_BASE_points = {}
-    data_PORT_points = {}
+    data_points = {}
     re_dirname = re.compile('/([0-9]+)_([0-9]+)')
     dn_match = re.search(re_dirname, dirname)
     if dn_match is None:
@@ -86,9 +85,6 @@ def read_log(dirname):
         if succ:
             if pos==None:
                 pos = -1
-            d_src = 'B'
-            if source=='PORT':
-                d_src = 'P'
             full_name = os.path.join(dirname, fname)
             with open(full_name) as f:
                 lines = [l.strip('\n\r') for l in f.readlines()]
@@ -101,7 +97,7 @@ def read_log(dirname):
                         la_rad = GPSproc.transform_degrees_str_to_rad(la)
                         lo_rad = GPSproc.transform_degrees_str_to_rad(lo)
                         (x,y) = geodes_tr.convert_GPS_to_GKS(la_rad, lo_rad, 158)
-                        results.append((d_src, 
+                        results.append((source, 
                                         pos, 
                                         x, 
                                         y,
@@ -109,13 +105,13 @@ def read_log(dirname):
                                         td,
                                         te))
                 # save results to structures
-                if d_src == 'B':
-                    data_BASE_points[pos] = results
-                else:
-                    data_PORT_points[pos] = results
+                if source not in data_points.keys():
+                    data_points[source] = {}
+                data_points[source][pos] = results
+
     # files have been successfully read;
     # merge them to create file
     #merge_data_to_file(data_BASE_points, './' + date_str + '_'+ time_str + '_BASE.csv')
     #merge_data_to_file(data_PORT_points, './' + date_str + '_'+ time_str + '_PORT.csv')
-    return (prepare_data(data_BASE_points), prepare_data(data_PORT_points))
+    return ({elem:prepare_data(data_points[elem]) for elem in data_points.keys()})
     
