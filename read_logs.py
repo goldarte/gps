@@ -7,6 +7,7 @@ import sys
 import itertools
 import GPSproc
 import geodes_tr
+from collections import namedtuple
 
 re_fname = re.compile('^GPS_([A-Z0-9]{4})(_P[0-9]+)?')
 def get_ftype(fname):
@@ -60,7 +61,7 @@ def prepare_data(data):
     lst_beg.sort(key = key_i5)
     lst_beg = remove_time_duplicates(lst_beg)
     return lst_beg
-    # lst_beg :: [(B|P, point, la, lo, hdop, time)]
+    # lst_beg :: [(B|P, point, lo, la, hdop, time)]
 
 def make_dictionary(data):
     res = {}
@@ -99,8 +100,8 @@ def read_log(dirname):
                         (x,y) = geodes_tr.convert_GPS_to_GKS(la_rad, lo_rad, 158)
                         results.append((source, 
                                         pos, 
-                                        x, 
-                                        y,
+                                        y, 
+                                        x,
                                         float(hd),
                                         td,
                                         te))
@@ -113,5 +114,11 @@ def read_log(dirname):
     # merge them to create file
     #merge_data_to_file(data_BASE_points, './' + date_str + '_'+ time_str + '_BASE.csv')
     #merge_data_to_file(data_PORT_points, './' + date_str + '_'+ time_str + '_PORT.csv')
-    return ({elem:prepare_data(data_points[elem]) for elem in data_points.keys()})
+    #data_points = sorted(data_points)
+    filename = date_str+'_'+time_str
+    out = None
+    out = namedtuple("out", "filename data")
+    out.filename = filename
+    out.data = {elem:prepare_data(data_points[elem]) for elem in data_points.keys()}
+    return out
     

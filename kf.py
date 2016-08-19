@@ -27,7 +27,7 @@ def kf_step(x0, P0, y, F, Q, H, R):
 	return (x, P)
 
 class kalman_filter:
-	def __init__(self, F, Q, H, R, x = 0, P = 0):
+	def __init__(self, F, Q, H, R, x, P):
 		self.F = np.matrix(F)
 		self.Q = np.matrix(Q)
 		self.H = np.matrix(H)
@@ -59,7 +59,7 @@ def test():
 	Q = sigma_proc
 	H = 1
 	R = sigma_meas
-	kf = kalman_filter(F, Q, H, R)
+	kf = kalman_filter(F, Q, H, R, 0, 0)
 	xf = kf.Apply(y)
 	mp.plot(t, x)
 	mp.plot(t, y)
