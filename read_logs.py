@@ -54,7 +54,7 @@ def merge_data_to_file(data, fname):
                                 str(elem[4]), td]) + '\n'
             f.write(res_str)
 
-def prepare_data(data):
+def prepare_log_data(data):
     lst_beg = []
     for ks in data.keys():
         lst_beg.extend(data[ks])
@@ -109,16 +109,10 @@ def read_log(dirname):
                 if source not in data_points.keys():
                     data_points[source] = {}
                 data_points[source][pos] = results
-
-    # files have been successfully read;
-    # merge them to create file
-    #merge_data_to_file(data_BASE_points, './' + date_str + '_'+ time_str + '_BASE.csv')
-    #merge_data_to_file(data_PORT_points, './' + date_str + '_'+ time_str + '_PORT.csv')
-    #data_points = sorted(data_points)
     filename = date_str+'_'+time_str
     out = None
     out = namedtuple("out", "filename data")
     out.filename = filename
-    out.data = {elem:prepare_data(data_points[elem]) for elem in data_points.keys()}
+    out.data = {elem:prepare_log_data(data_points[elem]) for elem in data_points.keys()}
     return out
     

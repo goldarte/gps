@@ -1,6 +1,8 @@
 import numpy as np
 import matplotlib.pyplot as mp
 
+# calculate one step of Kalman filter by parameters of model;
+# model is: x = Fx + w(Q), y = Hx + v(R)
 def kf_step(x0, P0, y, F, Q, H, R):
 	assert(type(x0).__name__=='matrix')
 	assert(type(P0).__name__=='matrix')
@@ -21,7 +23,7 @@ def kf_step(x0, P0, y, F, Q, H, R):
 	assert(R.shape[0]==y.shape[0])
 	xe = F*x0
 	Pe = F*P0*F.T + Q
-	G = Pe*H.T*(H*Pe*H.T + R)
+	G = Pe*H.T*(H*Pe*H.T + R).I
 	x = xe + G*(y - H*xe)
 	P = (np.eye(x0.shape[0]) - G*H)*Pe
 	return (x, P)
@@ -32,19 +34,20 @@ class kalman_filter:
 		self.Q = np.matrix(Q)
 		self.H = np.matrix(H)
 		self.R = np.matrix(R)
-		self.x = np.matrix(x)
+		self.x = np.matrix(x).T
 		self.P = np.matrix(P)
 		assert(self.F.shape[0]==self.F.shape[1])
 		assert(self.Q.shape[0]==self.Q.shape[1])
 		assert(self.R.shape[0]==self.R.shape[1])
-	def SetState(self, state, covariance):
-		self.x = state
-		self.P = covariance
 	def Apply(self, y):
-		out = np.zeros(len(y))
-		for i in range(0,len(y)):
-			self.x, self.P = kf_step(self.x, self.P, np.matrix(y[i]), self.F, self.Q, self.H, self.R)
-			out[i] = self.x
+		out = []
+		for elem in y:
+			self.x, self.P = kf_step(self.x, self.P, np.matrix(elem).T, self.F, self.Q, self.H, self.R)
+			#print (self.x, self.P)
+			out.append(self.x.A1)
+		return out
+	def Apply_step(self, y):
+		out = kf_step(self.x, self.P, np.matrix(y[1]).T, self.F, self.Q, self.H, self.R)
 		return out
 
 def test():
