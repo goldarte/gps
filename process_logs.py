@@ -7,11 +7,22 @@ import numpy as np
 import os
 import sys
 
-test_log = read_log('logs/120816_101621')
-pics_dir = 'pics/'
-directory = pics_dir+test_log.filename+'/'
-if not os.path.exists(directory):
-    os.makedirs(directory)
+#test_log = read_log('logs/120816_101621')
+#pics_dir = 'pics/'
+#directory = pics_dir+test_log.filename+'/'
+#if not os.path.exists(directory):
+#    os.makedirs(directory)
+
+def get_point_list(data):
+	return sorted(list(set([elem[1] for elem in data[data.keys()[0]]])))
+
+def get_point_data(data, points):
+	ndata = {key: [elem for elem in data[key] if elem[1] in points] for key in data.keys()}
+	return ndata
+	#ndata = {elem:data[elem]
+
+def get_key_data(data, keys):
+	return {key: data[key] for key in data.keys() if key in keys}	
 
 # calculate center point for gps data {elem:[(B|P, point, lo, la, hdop, time)]}
 def center_point(data):
@@ -28,15 +39,22 @@ def center_point(data):
 def center_point_test():
 	print center_point(test_log.data)
 
-def merge_data_by_time(data):
-	dataset = {elem : Set([v[5] for v in data[elem]]) for elem in data.keys()}
+def merge_data_by_time_2d(data):
+	dataset = {key : Set([elem[5] for elem in data[key]]) for key in data.keys()}
 	intersect = reduce((lambda x, y: x & dataset[y]), dataset, dataset[dataset.keys()[0]])
 	#print intersect
-	ndataset = {elem : [[v[2],v[3]] for v in data[elem] if v[5] in intersect] for elem in data.keys()}
+	ndataset = {key : [[elem[2],elem[3]] for elem in data[key] if elem[5] in intersect] for key in data.keys()}
+	return ndataset	
+
+def merge_data_by_time(data):
+	dataset = {key : Set([elem[5] for elem in data[key]]) for key in data.keys()}
+	intersect = reduce((lambda x, y: x & dataset[y]), dataset, dataset[dataset.keys()[0]])
+	#print intersect
+	ndataset = {key : [elem for elem in data[key] if elem[5] in intersect] for key in data.keys()}
 	return ndataset	
 
 def merge_data_by_time_test():
-	ndata = merge_data_by_time(data)
+	ndata = merge_data_by_time_2d(data)
 	print ndata['BASE']
 
 def shift_data_to_center_point(data):
@@ -46,19 +64,28 @@ def shift_data_to_center_point(data):
 def shift_data_to_center_point_test():
 	print shift_data_to_center_point(test_log.data)['BASE']
 
+def prepare_data_2d(data):
+	shift_data = shift_data_to_center_point(data)
+	clear_data = merge_data_by_time_2d(shift_data)
+	return clear_data
+
 def prepare_data(data):
 	shift_data = shift_data_to_center_point(data)
 	clear_data = merge_data_by_time(shift_data)
 	return clear_data
 
 #input format {elem: [(x,y)]}
-def plot_data(data, logs_name, plot_name ):
+def plot_data_2d(data, logs_name, plot_name, mode = ('raw')):
 	#print d1, d2
 	legend = []
 	for elem in sorted(data.keys()):
 		#pp.plot(*zip(*data[elem]), label = elem)
-		l, = pp.plot(*zip(*data[elem]), label = elem)
-		legend.append(l) 
+		if 'raw' in mode:
+			l, = pp.plot(*zip(*data[elem]), label = elem)
+			legend.append(l) 
+		if 'points' in mode:
+			l, = pp.plot(*zip(*data[elem]), label = elem, ls = '', marker = 'o')
+			legend.append(l) 		
 	pp.xlabel('longitude, m')
 	pp.ylabel('latitude, m')
 	pp.legend(handles=legend)
@@ -67,10 +94,40 @@ def plot_data(data, logs_name, plot_name ):
 	pp.clf()
 	#pp.show()	
 
-def plot_data_test():
-	plot_data(prepare_data(test_log.data), test_log.filename, 'trajectories')
+def plot_data(data, logs_name, plot_name, mode = ('raw')):
+	#print d1, d2
+	legend = []
+	for key in sorted(data.keys()):
+		#pp.plot(*zip(*data[elem]), label = elem)
+		xy = [[elem[2], elem[3]] for elem in data[key]]
+		if 'raw' in mode:
+			l, = pp.plot(*zip(*xy), label = key)
+			legend.append(l) 
+		if 'points' in mode:
+			l, = pp.plot(*zip(*xy), label = key, ls = '', marker = 'o')
+			legend.append(l) 
+		if 'std' in mode:
+			points = get_point_list(data)
+			for point in points:
+				xy = [[elem[2], elem[3]] for elem in data[key] if elem[1] == point]
+				mean = np.mean(xy, axis = 0)
+				std = np.std(xy, axis = 0)
+				pp.plot([mean[0]-std[0]/2, mean[0]+std[0]/2],[mean[1], mean[1]], color = 'b')
+				pp.text(mean[0]+std[0]/2+3, mean[1]-2, str(round(std[0],2)))	
+				pp.plot([mean[0], mean[0]],[mean[1]-std[1]/2, mean[1]+std[1]/2], color = 'b')
+				pp.text(mean[0]-4, mean[1]+std[1]/2+3, str(round(std[1],2)))
+				pp.text(mean[0]-8, mean[1]-6, ' P'+str(point))	
+	pp.xlabel('longitude, m')
+	pp.ylabel('latitude, m')
+	pp.legend(handles=legend)
+	pp.title(logs_name + ' ' + plot_name)
+	pp.savefig(pics_dir+logs_name+'/'+logs_name + '_' + plot_name + '.png')
+	pp.clf()
 
-def filter_data(data, key1, key2, mode = 'DIFF'):
+def plot_data_test():
+	plot_data_2d(prepare_data(test_log.data), test_log.filename, 'trajectories')
+
+def filter_data_2d(data, key1, key2, mode = 'DIFF'):
 	x1 = data[key1]
 	x2 = data[key2]
 	out = {}
@@ -100,29 +157,50 @@ def filter_data(data, key1, key2, mode = 'DIFF'):
 		out[mode+'('+key1+','+key2+')'] = kf.Apply(x)
 	return out
 
+def filter_data(data, key1, key2, mode = 'DIFF'):
+	x1 = [(elem[2], elem[3]) for elem in data[key1]]
+	x2 = [(elem[2], elem[3]) for elem in data[key2]]
+	out = data.copy()
+	filtered_array = []
+	if mode == 'DIFF':
+		sigma_proc = 0.25
+		sigma_meas = 30
+		x = [map(lambda x,y: x-y, x1[i], x2[i]) for i in range(len(x1))]
+		x0 = x[0]
+		P0 = np.eye(2)*sigma_proc
+		F = np.eye(2)
+		Q = np.eye(2)*sigma_proc
+		H = np.eye(2)
+		R = np.eye(2)*sigma_meas
+		kf = kalman_filter(F, Q, H, R, x0, P0)
+		filtered_array = kf.Apply(x)
+	elif mode=='DUAL':
+		sigma_proc = 1
+		sigma_meas = 20
+		x = np.concatenate((x1,x2),axis=1)
+		x0 = map(lambda x,y: (x+y)/2, x1[0], x2[0]) 
+		P0 = np.eye(2)*sigma_proc 
+		F = np.eye(2)
+		Q = np.eye(2)*sigma_proc
+		H = np.concatenate((np.eye(2), np.eye(2)),axis=0)
+		R = np.eye(4)*sigma_meas
+		kf = kalman_filter(F, Q, H, R, x0, P0)
+		filtered_array = kf.Apply(x)
+	out[mode+'('+key1+','+key2+')'] = [(data[key1][i][0], data[key1][i][1], filtered_array[i][0], filtered_array[i][0], data[key1][i][4], data[key1][i][5]) for i in len(filtered_array)]
+	return out
+
 def filter_data_test():
 	pdata = prepare_data(test_log.data)
 	#print filter_data_diff_mode(pdata, 'PRT1', 'BASE')
 	plot_data(filter_data(pdata, 'PRT1', 'PRT2','DUAL'), test_log.filename, 'kalman_dual')
 
-def prepare_diff_mode(data1,data2):
-	sigma_proc = 0.25
-	sigma_meas = 30
-	
-	#x0 = (data_port(1,3:4)-base_pos)
-	#P0 = eye(2)*sigma_proc; 
-	#F = eye(2);
-	#Q = eye(2)*sigma_proc;
-	#H = eye(2);
-	#R = eye(2)*sigma_meas;
-	#y = data_port(:,3:4)-base_pos;
-
 #merge_data_by_time_test()
 #plot_trajectories_test()
 #center_point_test()
 #shift_data_to_center_point_test()
-filter_data_test()
-
+#filter_data_test()
+#print get_point_list(get_point_data(test_log.data, (1,2,3)))
+#plot_data(prepare_data(get_key_data(get_point_data(test_log.data, (1,2,3,4,5)),('BASE','PRT2'))), test_log.filename, 'points_std_prt2', ('std','points'))
 
 
 
