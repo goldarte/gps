@@ -7,11 +7,11 @@ import numpy as np
 import os
 import sys
 
-#test_log = read_log('logs/120816_101621')
-#pics_dir = 'pics/'
-#directory = pics_dir+test_log.filename+'/'
-#if not os.path.exists(directory):
-#    os.makedirs(directory)
+test_log = read_log('logs/120816_101621')
+pics_dir = 'pics/'
+directory = pics_dir+test_log.filename+'/'
+if not os.path.exists(directory):
+    os.makedirs(directory)
 
 def get_point_list(data):
 	return sorted(list(set([elem[1] for elem in data[data.keys()[0]]])))
@@ -186,7 +186,7 @@ def filter_data(data, key1, key2, mode = 'DIFF'):
 		R = np.eye(4)*sigma_meas
 		kf = kalman_filter(F, Q, H, R, x0, P0)
 		filtered_array = kf.Apply(x)
-	out[mode+'('+key1+','+key2+')'] = [(data[key1][i][0], data[key1][i][1], filtered_array[i][0], filtered_array[i][0], data[key1][i][4], data[key1][i][5]) for i in len(filtered_array)]
+	out[mode+'('+key1+','+key2+')'] = [(data[key1][i][0], data[key1][i][1], filtered_array[i][0], filtered_array[i][1], data[key1][i][4], data[key1][i][5]) for i in range(len(filtered_array))]
 	return out
 
 def filter_data_test():
@@ -201,6 +201,7 @@ def filter_data_test():
 #filter_data_test()
 #print get_point_list(get_point_data(test_log.data, (1,2,3)))
 #plot_data(prepare_data(get_key_data(get_point_data(test_log.data, (1,2,3,4,5)),('BASE','PRT2'))), test_log.filename, 'points_std_prt2', ('std','points'))
+plot_data(get_key_data(filter_data(prepare_data(test_log.data), 'PRT2', 'BASE'),('DIFF(PRT2,BASE)')), test_log.filename, 'points_std_prt2_diff', ('std'))
 
 
 
